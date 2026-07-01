@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DailyBite | Food Intelligence</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Feather Icons for lightweight, clean SVG icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <h1 class="logo">DailyBite</h1>
+            <div class="scanner-indicator">
+                <div class="pulse-dot"></div>
+                <span class="scanner-text">LIVE SCANNING</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="icon-button" aria-label="Settings">
+                <i data-feather="settings"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="app-content">
+        <!-- Browse / Deals View -->
+        <section id="view-deals" class="page-container hidden">
+            <!-- Rendered via JS -->
+        </section>
+
+        <!-- Today View (Default) -->
+        <section id="view-today" class="page-container">
+            <!-- Rendered via JS -->
+        </section>
+
+        <!-- Calendar View -->
+        <section id="view-calendar" class="page-container hidden">
+            <!-- Rendered via JS -->
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item" data-target="deals">
+            <i data-feather="tag"></i>
+            <span>Deals</span>
+        </button>
+        
+        <div class="nav-item-center-wrapper">
+            <button class="nav-item center-action active" data-target="today">
+                <i data-feather="compass"></i>
+            </button>
+        </div>
+
+        <button class="nav-item" data-target="calendar">
+            <i data-feather="calendar"></i>
+            <span>Calendar</span>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
