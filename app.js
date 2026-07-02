@@ -1,122 +1,313 @@
-// 1. State Manager
+// ===============================
+// DailyBite
+// app.js
+// ===============================
+
+// -------------------------------
+// State Manager
+// -------------------------------
 const State = {
-    selectedTab: 'today',
-    selectedDate: '2026-07-01', // Using July 1, 2026 as current context
+    selectedTab: "today",
+    selectedDate: new Date().toISOString().split("T")[0],
     deals: [],
     foodDays: [],
     isLoading: true
 };
 
-// 2. Loader
+// -------------------------------
+// Initialize App
+// -------------------------------
 async function initApp() {
     try {
-        // In production, these would be fetch() calls to deals.json and food_days.json
-        // Mocking the fetch to demonstrate the architecture immediately
-        State.deals = await mockFetchDeals();
-        State.foodDays = await mockFetchFoodDays();
+
+        const dealsResponse = await fetch("./deals.json");
+        const foodDaysResponse = await fetch("./food_days.json");
+
+        if (!dealsResponse.ok) {
+            throw new Error("Unable to load deals.json");
+        }
+
+        if (!foodDaysResponse.ok) {
+            throw new Error("Unable to load food_days.json");
+        }
+
+        State.deals = await dealsResponse.json();
+        State.foodDays = await foodDaysResponse.json();
+
         State.isLoading = false;
 
-        // Initialize Icons
-        feather.replace();
-        
-        // Setup Event Listeners
+        console.log("Deals Loaded:", State.deals);
+        console.log("Food Days Loaded:", State.foodDays);
+
+        if (window.feather) {
+            feather.replace();
+        }
+
         setupNavigation();
-        
-        // Initial Render
+
         renderApp();
+
     } catch (error) {
-        console.error("Failed to load intelligence data:", error);
+
+        console.error(error);
+
+        document.body.innerHTML = `
+            <div style="
+                color:white;
+                padding:40px;
+                font-family:sans-serif;
+            ">
+                <h2>Failed to load DailyBite data.</h2>
+                <p>${error.message}</p>
+                <p>Verify that deals.json and food_days.json exist in the project root.</p>
+            </div>
+        `;
     }
 }
 
-// 3. Event Handlers
+// -------------------------------
+// Navigation
+// -------------------------------
 function setupNavigation() {
-    const navButtons = document.querySelectorAll('.nav-item');
+
+    const navButtons =
+        document.querySelectorAll(".nav-item");
+
     navButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const target = e.currentTarget.getAttribute('data-target');
-            if (target) {
-                State.selectedTab = target;
-                
-                // Update UI active states
-                navButtons.forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                
-                // Redraw
-                renderApp();
-            }
+
+        btn.addEventListener("click", e => {
+
+            const target =
+                e.currentTarget.dataset.target;
+
+            if (!target) return;
+
+            State.selectedTab = target;
+
+            navButtons.forEach(b =>
+                b.classList.remove("active")
+            );
+
+            e.currentTarget.classList.add("active");
+
+            renderApp();
+
         });
+
     });
+
 }
 
-// 4. Renderer
+// -------------------------------
+// Render Router
+// -------------------------------
 function renderApp() {
-    // Hide all views
-    document.querySelectorAll('.page-container').forEach(container => {
-        container.classList.add('hidden');
-    });
 
-    // Show target view and render its content
-    const activeContainer = document.getElementById(`view-${State.selectedTab}`);
-    activeContainer.classList.remove('hidden');
+    document
+        .querySelectorAll(".page-container")
+        .forEach(page =>
+            page.classList.add("hidden")
+        );
 
-    if (State.selectedTab === 'today') renderToday(activeContainer);
-    if (State.selectedTab === 'deals') renderDeals(activeContainer);
-    if (State.selectedTab === 'calendar') renderCalendar(activeContainer);
+    const active =
+        document.getElementById(
+            `view-${State.selectedTab}`
+        );
+
+    if (active)
+        active.classList.remove("hidden");
+
+    switch (State.selectedTab) {
+
+        case "today":
+            renderToday(active);
+            break;
+
+        case "deals":
+            renderDeals(active);
+            break;
+
+        case "calendar":
+            renderCalendar(active);
+            break;
+
+    }
+
 }
 
+// -------------------------------
+// Today Screen
+// -------------------------------
 function renderToday(container) {
-    // Phase 1: Simple scaffold for Today screen
+
+    const today =
+        State.selectedDate;
+
+    const todayDeals =
+        State.deals
+            .filter(deal =>
+                deal.event_start_date <= today &&
+                deal.event_end_date >= today
+            )
+            .sort((a, b) =>
+                b.bite_score - a.bite_score
+            );
+
+    const formattedDate =
+        new Date(today).toLocaleDateString(
+            "en-US",
+            {
+                weekday: "long",
+                month: "long",
+                day: "numeric"
+            }
+        );
+
     container.innerHTML = `
-        <div class="greeting-subtitle">GOOD MORNING</div>
-        <div class="greeting-title">Wednesday<br>July 1</div>
-        <div class="greeting-desc">Verified opportunities worth your attention today.</div>
-        
-        <div style="padding: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 16px; text-align: center;">
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                Scanning complete. Deals rendered here in Phase 2.
-            </p>
+        <div class="greeting-subtitle">
+            GOOD MORNING
         </div>
+
+        <div class="greeting-title">
+            ${formattedDate}
+        </div>
+
+        <div class="greeting-desc">
+            Verified opportunities worth your attention today.
+        </div>
+
+        ${
+            todayDeals.length
+                ? todayDeals
+                    .map(createDealCard)
+                    .join("")
+                : `
+                <div class="empty-state">
+                    <p>No verified deals today.</p>
+                </div>
+                `
+        }
     `;
+
 }
 
+// -------------------------------
+// Browse Screen
+// -------------------------------
 function renderDeals(container) {
-    container.innerHTML = `<h2 class="greeting-title">All Opportunities</h2><p class="greeting-desc">Browse directory coming in Phase 3.</p>`;
+
+    const sorted =
+        [...State.deals]
+            .sort((a, b) =>
+                b.bite_score - a.bite_score
+            );
+
+    container.innerHTML = `
+
+        <div class="greeting-title">
+            All Opportunities
+        </div>
+
+        <div class="greeting-desc">
+            Browse every verified DailyBite opportunity.
+        </div>
+
+        ${sorted.map(createDealCard).join("")}
+
+    `;
+
 }
 
+// -------------------------------
+// Calendar Screen
+// -------------------------------
 function renderCalendar(container) {
-    container.innerHTML = `<h2 class="greeting-title">Food Calendar</h2><p class="greeting-desc">Upcoming events coming in Phase 4.</p>`;
+
+    const holidays =
+        State.foodDays
+            .map(day => `
+                <div class="holiday-row">
+
+                    <strong>
+                        ${day.holiday}
+                    </strong>
+
+                    <div>
+                        ${day.date}
+                    </div>
+
+                </div>
+            `)
+            .join("");
+
+    container.innerHTML = `
+
+        <div class="greeting-title">
+            Food Calendar
+        </div>
+
+        <div class="greeting-desc">
+            Upcoming National Food Holidays
+        </div>
+
+        ${holidays}
+
+    `;
+
 }
 
-// Mock Data Loaders (Replace with fetch in actual deployment)
-async function mockFetchDeals() {
-    return [
-        {
-            "id": 27,
-            "title": "Free Krispy Kreme Donut",
-            "restaurant": "Krispy Kreme",
-            "description": "One Original Glazed donut.",
-            "location": "Nationwide",
-            "bite_score": 100,
-            "verified": true,
-            "verification_type": "Official",
-            "category": "Food Holiday",
-            "event_start_date": "2026-07-10",
-            "event_end_date": "2026-07-10",
-            "source_url": "...",
-            "reason": "National Donut Day"
-        }
-    ];
+// -------------------------------
+// Deal Card
+// -------------------------------
+function createDealCard(deal) {
+
+    return `
+
+    <div class="deal-card">
+
+        <div class="deal-score">
+
+            ${deal.bite_score}
+
+        </div>
+
+        <div class="deal-content">
+
+            <h3>${deal.title}</h3>
+
+            <p>${deal.description}</p>
+
+            <small>
+
+                ${deal.restaurant}
+
+                •
+
+                ${deal.location}
+
+            </small>
+
+            <br><br>
+
+            <a
+                href="${deal.source_url}"
+                target="_blank"
+            >
+                View Source
+            </a>
+
+        </div>
+
+    </div>
+
+    `;
+
 }
 
-async function mockFetchFoodDays() {
-    return [
-        {
-            "date": "2026-07-10",
-            "holiday": "National Piña Colada Day"
-        }
-    ];
-}
-
-// Boot the app
-document.addEventListener('DOMContentLoaded', initApp);
+// -------------------------------
+// Boot
+// -------------------------------
+document.addEventListener(
+    "DOMContentLoaded",
+    initApp
+);
